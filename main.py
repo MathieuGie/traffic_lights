@@ -24,7 +24,7 @@ use_buffer=False
 batch_size=128
 
 #Epsilon decay
-epsilon_decay=0.99995
+epsilon_decay=0.99999
 
 class Coordinator:
 
@@ -75,6 +75,12 @@ class Coordinator:
         self.replay_Dphase=torch.zeros((length_D,2,8)) #To store the state variables
         self.replay_Dstate=torch.zeros((length_D,8,12))
         self.replay_Dint=torch.zeros((length_D,5)) #To store int (action number and reward)
+
+        #Collect the comparison results here
+        self.comparer = No_learning_coordinator(N, M, mini_thru, maxi_thru, mini_in, maxi_in)
+        self.comparison_results={}
+
+        self.set_comparison()
 
     def next_round(self, epsilon:float, choice:int): #epsilon is for the epsilon greedy policy
 
@@ -277,7 +283,7 @@ class Coordinator:
             self.frap=self.frap_remember
 
         #BUT cancel the effects of backpropagation on target network if it is not the right time
-        #self.update_target_network(C_target)
+        self.update_target_network(C_target)
 
     def update_target_network(self, C:int):
         #This function allows to update the target network every C iterations
@@ -299,10 +305,16 @@ class Coordinator:
         #Then need to harmonise to make each intersection aware of its neighbors:
         self.city.set_harmony(self.all_intersections)
 
+    def set_comparison(self):
+
+        self.comparison_results["random"] = self.comparer.episodes_random_agent()
+        self.comparison_results["cyclic"] = self.comparer.episodes_cyclic_agent()
+        self.comparison_results["greedy"] = self.comparer.episodes_greedy_agent()
+
     def train(self, iterations:int, epsilon:float, batch_size:int, C_target:int):
 
         #Re-initialise:
-        self.city=City5(self.N, self.M, self.mini_in,  self.maxi_in)
+        self.city=City5(self.N, self.M, self.mini_in, self.maxi_in)
         self.learners={}
 
         #Define the optimisers:
@@ -320,6 +332,9 @@ class Coordinator:
         age_history={}
 
         average=[]
+        random=[]
+        cyclic=[]
+        greedy=[]
 
         EPISODES_OVERALL_history=[0]
         deadd=0
@@ -500,30 +515,38 @@ class Coordinator:
                 plt.close(fig7)
                 plt.close(fig8)
 
-            if len(EPISODES_OVERALL_history)%100==0 and iteration!=0 and check==1:
+            if len(EPISODES_OVERALL_history)%500==0 and iteration!=0 and check==1:
 
                 check=0
+
+                random.append(self.comparison_results["random"])
+                cyclic.append(self.comparison_results["cyclic"])
+                greedy.append(self.comparison_results["greedy"])
 
                 fig10, ax10 = plt.subplots()
                 ax10.set_title("average_episodes"+str(C_target))
 
                 print("epsilon=", epsilon)
-                average_episode=np.sum(EPISODES_OVERALL_history[-100:])
-                average_episode/=100
+                average_episode=np.sum(EPISODES_OVERALL_history[-500:])
+                average_episode/=500
                 average.append(average_episode)
-                ax10.plot(average, color=COLOR_LIST[7])
+                ax10.plot(average, color="blue")
+                ax10.plot(random, color = "red")
+                ax10.plot(cyclic, color="yellow")
+                ax10.plot(greedy, color="green")
+
 
                 fig10.savefig("average_episodes_overall"+run_number+".png")
                 plt.close(fig10)
 
-            if len(EPISODES_OVERALL_history)%100!=0:
+            if len(EPISODES_OVERALL_history)%500!=0:
 
                 check=1
 
 mini_thru=7
-maxi_thru=9
+maxi_thru=8
 
-mini_in=1
+mini_in=2
 maxi_in=3
 
 #print(No_learning_coordinator(1,1,mini_thru, maxi_thru, mini_in, maxi_in).episodes_random_agent())

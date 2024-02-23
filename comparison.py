@@ -7,8 +7,8 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 
-from cross import *
-from city import *
+from intersection2 import *
+from city2 import *
 
 class No_learning_coordinator:
 
@@ -27,7 +27,7 @@ class No_learning_coordinator:
         self.mini_in=mini_in
         self.maxi_in=maxi_in
 
-        self.city=City(self.N, self.M, self.mini_in, self.maxi_in)
+        self.city=City5(self.N, self.M, self.mini_in, self.maxi_in)
 
         #Intersections, the dictionary of all the intersections depends on coordinator (as both City and Q_Learner2 use it)
         #We also initialise the dictionary of all the Q_Learners:
@@ -37,7 +37,7 @@ class No_learning_coordinator:
         for i in range(self.N):
             for j in range(self.M):
 
-                self.all_intersections[(i,j)]=Intersection(self.mini_thru, self.maxi_thru)
+                self.all_intersections[(i,j)]=Crossing5(self.mini_in, self.maxi_in, self.mini_thru, self.maxi_thru, i, j)
 
     def reset_game(self):
 
@@ -46,7 +46,7 @@ class No_learning_coordinator:
 
         for i in range(self.N):
             for j in range(self.M):
-                self.all_intersections[(i,j)]=Intersection(self.mini_thru, self.maxi_thru)
+                self.all_intersections[(i,j)]=Crossing5(self.mini_in, self.maxi_in, self.mini_thru, self.maxi_thru, i, j)
 
         #Then need to harmonise to make each intersection aware of its neighbors:
         self.city.set_harmony(self.all_intersections)
@@ -68,14 +68,13 @@ class No_learning_coordinator:
 
                         self.action=np.random.randint(0,8)
                         
-                        self.all_intersections[(i,j)].new_round(self.action)
-                        self.all_intersections[(i,j)].turning_right()
+                        self.all_intersections[(i,j)].next_round(self.action)
                         #BOUNDARY:
                         #1. exit
-                        self.city.update_exit_boundary(self.all_intersections,i,j)
+                        self.city.exit_boundary(self.all_intersections,i,j)
 
                         #2. new cars
-                        self.city.add_at_boundary(self.all_intersections, i, j)
+                        self.city.waiting_boundary(self.all_intersections, i, j)
                         self.all_intersections[(i,j)].rewarding()
                         rewards[i*self.M+j]=self.all_intersections[(i,j)].reward
                         
@@ -113,14 +112,13 @@ class No_learning_coordinator:
                 for i in range(self.N):
                     for j in range(self.M):
                         
-                        self.all_intersections[(i,j)].new_round(actions[self.M*i+j])
-                        self.all_intersections[(i,j)].turning_right()
+                        self.all_intersections[(i,j)].next_round(actions[self.M*i+j])
                         
                         #BOUNDARY:
                         #1. exit
-                        self.city.update_exit_boundary(self.all_intersections,i,j)
+                        self.city.exit_boundary(self.all_intersections,i,j)
                         #2. new cars
-                        self.city.add_at_boundary(self.all_intersections, i, j)
+                        self.city.waiting_boundary(self.all_intersections, i, j)
 
                         self.all_intersections[(i,j)].rewarding()
                         rewards[i*self.M+j]=self.all_intersections[(i,j)].reward
@@ -163,14 +161,13 @@ class No_learning_coordinator:
                                 phase_number[phase]+=self.all_intersections[(i,j)].waiting[self.possible[phase][lane]]
                         action=np.argmax(phase_number)
                         
-                        self.all_intersections[(i,j)].new_round(action)
-                        self.all_intersections[(i,j)].turning_right()
+                        self.all_intersections[(i,j)].next_round(action)
                         #BOUNDARY:
                         #1. exit
-                        self.city.update_exit_boundary(self.all_intersections,i,j)
+                        self.city.exit_boundary(self.all_intersections,i,j)
 
                         #2. new cars
-                        self.city.add_at_boundary(self.all_intersections, i, j)
+                        self.city.waiting_boundary(self.all_intersections, i, j)
                         #print(self.all_intersections[(i,j)].waiting)
                         self.all_intersections[(i,j)].rewarding()
                         rewards[i*self.M+j]=self.all_intersections[(i,j)].reward

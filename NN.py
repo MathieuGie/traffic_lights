@@ -9,8 +9,6 @@ import torch.nn.functional as F
 
 import copy
 
-#CUDA
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") #if you have a GPU with CUDA installed, this may speed up computation
 
 #DROPOUT
 drop=0.2
@@ -72,15 +70,16 @@ class FRAP5(nn.Module):
     def forward(self, waiting:torch.Tensor, phase:torch.Tensor, wtime_mu:torch.Tensor, wtime_sigma:torch.Tensor, wtime_max:torch.Tensor, i_position:torch.Tensor, j_position:torch.Tensor):
 
         #print("HELLOOOOOO")
-        phase=phase.to(device)
-        waiting=waiting.to(device)
-        wtime_max=wtime_max.to(device)
-        wtime_mu=wtime_mu.to(device)
-        wtime_sigma=wtime_sigma.to(device)
-        i_position=i_position.to(device)
-        j_position=j_position.to(device)
+        phase=phase
+        waiting=waiting
+        wtime_max=wtime_max
+        wtime_mu=wtime_mu
+        wtime_sigma=wtime_sigma
+        i_position=i_position
+        j_position=j_position
         #print(torch.cat((i_position[:,:], j_position[:,:], wtime_mu[:,:], wtime_sigma[:,:], wtime_max[:,:], waiting[:,:],phase),1))
 
         demand=self.NN_demand(torch.cat((i_position[:,:], j_position[:,:], wtime_mu[:,:], wtime_sigma[:,:], wtime_max[:,:], waiting[:,:],phase),1))
         #print("demand",demand)
-        return self.NN_final(demand)
+        #return self.NN_final(demand)
+        return demand
